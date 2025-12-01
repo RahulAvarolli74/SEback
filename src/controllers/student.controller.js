@@ -1,97 +1,94 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiError} from '../utils/ApiError.js'
-import {ApiRes} from '../utils/ApiRes.js'
-import jwt from 'jsonwebtoken'
-import {User} from '../models/user.model.js'
+import { ApiError } from "../utils/ApiError.js";
+import { ApiRes } from "../utils/ApiRes.js";
+import { User } from "../models/user.model.js";
 
+const generateAccessTokenAndRefreshToken = async (id) => {
+  const user = await User.findById(id);
+  if (!user) throw new ApiError(404, "User not found");
 
-const  generateAccessTokenandRefreshToken=async (id)=>{
-   try {
-     const user=await User.findById(id);
-     // if(!user){
-     //     throw new ApiError(400,"User not found while generating token");
-     // }
-     const genaccesstoken=user.generateAccessToken();
-     const genrefreshtoken=user.generateRefreshToken();
-     user.refreshtoken=genrefreshtoken;
-     await user.save({validateBeforeSave:false})//save in database
- 
-     return {genaccesstoken,genrefreshtoken};
-   } catch (error) {
-        throw new ApiError(500, "Somethin went erro while generationg access token and Refresh token")
-   }
-}
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
 
-const loginStudent=asyncHandler(async (req,res)=>{
-    //load data from req body
-    //roomno, password
-    //check on both
-    //refresh token for stu snd admin
-    //send cookie
+  user.refreshtoken = refreshToken;
+  await user.save({ validateBeforeSave: false });
 
-    const{room_no,password}=req.body
-    if(!(room_no||password)){
-        throw new ApiError(400,"All fields are required")
-    }
-    const userexist = await User.findOne({ room_no, role: 'STUDENT' });
-    if(!userexist){
-        throw new ApiError(400, "User doesnot exit");
-    }
+  return { accessToken, refreshToken };
+};
 
-const ispassvalid = await userexist.isPasswordCorrect(password);
-     if(!ispassvalid){
-        throw new ApiError(400,"Invalid Credentials.");
-    }
-    const { accessToken, refreshToken } = await generateAccessTokenandRefreshToken(userexist._id)
+// STUDENT LOGIN
+const loginStudent = asyncHandler(async (req, res) => {
+  const { room_no, password } = req.body;
 
-    const loggedinuser=await User.findById(userexist._id);
+  if (!room_no || !password) {
+    throw new ApiError(400, "room_no and password are required");
+  }
 
-    const options={
-        httponly:true,
-        secure:true
-    }
-    return res
+  const userexist = await User.findOne({
+    room_no
+    // role: "STUDENT",
+  });
+   console.log(userexist);
+
+  if (!userexist) {
+    throw new ApiError(400, "Room notfound ");
+  }
+  
+  const ispassvalid = await userexist.ispasswordCorrect(password);
+
+  if (!ispassvalid) {
+    throw new ApiError(400, "Room credentials invalid");
+  }
+
+  const { accessToken, refreshToken } =
+    await generateAccessTokenAndRefreshToken(userexist._id);
+
+  const options = {
+    httpOnly: true,
+    secure: true
+  };
+
+  return res
     .status(200)
-    .cookie("accesstoken",accessToken,options)
-    .cookie("refreshtoken",refreshToken,options)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(
-        new ApiRes(200,
-            {
-                user:loggedinuser,accessToken,refreshToken
-            },
-            "User loggedin Succesfully "
-        )
-    )
+      new ApiRes(
+        200,
+        {
+          user: {
+            _id: userexist._id,
+            room_no: userexist.room_no,
+            role: userexist.role,
+          },
+          accessToken,
+          refreshToken,
+        },
+        "Student logged in successfully"
+      )
+    );
 });
 
-const logoutStudent=asyncHandler(async(req,res)=>{
-    //find the user 
-    //clear tokens
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $unset:{
-                refreshtoken:1
-            }
-        },
-        {new:true}
-    )
+// STUDENT LOGOUT
+const logoutStudent = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $unset: { refreshtoken: 1 },
+    },
+    { new: true }
+  );
 
-    const options={
-        httponly:true,
-        secure:true
-    }
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
 
-    return res
+  return res
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiRes(200,{},"User logged out Successfully"))
+    .json(new ApiRes(200, {}, "Student logged out successfully"));
 });
 
-
-
-export{
-    loginStudent,
-    logoutStudent
-}
+export { loginStudent,logoutStudent };

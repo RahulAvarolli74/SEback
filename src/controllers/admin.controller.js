@@ -1,99 +1,136 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiError} from '../utils/ApiError.js'
-import {ApiRes} from '../utils/ApiRes.js'
-import jwt from 'jsonwebtoken'
-import {User} from '../models/user.model.js'
+import { ApiError } from "../utils/ApiError.js";
+import { ApiRes } from "../utils/ApiRes.js";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";           
+import { User } from "../models/user.model.js";
 
+const generateAccessTokenandRefreshToken = async (id) => {
+  try {
+    const user = await User.findById(id);
 
-const  generateAccessTokenandRefreshToken=async (id)=>{
-   try {
-     const user=await User.findById(id);
-     // if(!user){
-     //     throw new ApiError(400,"User not found while generating token");
-     // }
-     const genaccesstoken=user.generateAccessToken();
-     const genrefreshtoken=user.generateRefreshToken();
-     user.refreshtoken=genrefreshtoken;
-     await user.save({validateBeforeSave:false})//save in database
- 
-     return {genaccesstoken,genrefreshtoken};
-   } catch (error) {
-        throw new ApiError(500, "Somethin went erro while generationg access token and Refresh token")
-   }
-}
+    const genaccesstoken = user.generateAccessToken();
+    const genrefreshtoken = user.generateRefreshToken();
 
-const loginadmin=asyncHandler(async (req,res)=>{
-    //load data from req body
-    //roomno, password
-    //check on both
-    //refresh token for stu snd admin
-    //send cookie
+    user.refreshtoken = genrefreshtoken;
+    await user.save({ validateBeforeSave: false });
 
-    const{username,password}=req.body
-    if(!(username||password)){
-        throw new ApiError(400,"All fields are required")
-    }
-    const userexist= await User.findOne({
-        username
-    })
-    if(!userexist){
-        throw new ApiError(400, "User doesnot exit");
-    }
+    return { accessToken: genaccesstoken, refreshToken: genrefreshtoken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating access token and refresh token"
+    );
+  }
+};
 
-    const ispassvalid=await ispasswaordCorrect(password);
-     if(!ispassvalid){
-        throw new ApiError(400,"Invalid Credentials.");
-    }
-    const { accessToken, refreshToken } = await generateAccessTokenandRefreshToken(userexist._id)
+// ADMIN: create room credentials (room_no + password) in `users` collection
+// room_no will be stored in `username`, password will be hashed with bcrypt
+const enterdata = asyncHandler(async (req, res) => {
+  const { room_no, password } = req.body;
 
-    const loggedinuser=await User.findById(userexist._id);
+  // basic validation
+  if (!room_no || !password) {
+    throw new ApiError(400, "room_no and password are required");
+  }
 
-    const options={
-        httponly:true,
-        secure:true
-    }
-    return res
-    .status(200)
-    .cookie("accesstoken",accessToken,options)
-    .cookie("refreshtoken",refreshToken,options)
-    .json(
-        new ApiRes(200,
-            {
-                user:loggedinuser,accessToken,refreshToken
-            },
-            "User loggedin Succesfully "
-        )
+  // check if room already exists
+  const existing = await User.findOne({ username: room_no });
+  if (existing) {
+    throw new ApiError(409, "Room already exists in the database");
+  }
+
+  // hash password
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+  // create user entry for this room
+  const user = await User.create({
+    username: room_no,       // you’ll use this as username during login
+    password: hashedPassword,
+    // you can add extra fields if your schema supports them, e.g.:
+    role: "student",
+    // roomNo: room_no,
+  });
+
+  return res.status(201).json(
+    new ApiRes(
+      201,
+      {
+        user: {
+          _id: user._id,
+          username: user.username,
+        },
+      },
+      "Room credentials created successfully"
     )
+  );
 });
 
-const logoutadmin=asyncHandler(async(req,res)=>{
-    //find the user 
-    //clear tokens
-    await User.findByIdAndUpdate(
-        req.user._id,
+const loginadmin = asyncHandler(async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  const userexist = await User.findOne({ username });
+  if (!userexist) {
+    throw new ApiError(400, "User does not exist");
+  }
+
+  const ispassvalid = await userexist.ispasswaordCorrect(password);
+  if (!ispassvalid) {
+    throw new ApiError(400, "Invalid Credentials.");
+  }
+
+  const { accessToken, refreshToken } =
+    await generateAccessTokenandRefreshToken(userexist._id);
+
+  const loggedinuser = await User.findById(userexist._id).select("-password");
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiRes(
+        200,
         {
-            $unset:{
-                refreshtoken:1
-            }
+          user: loggedinuser,
+          accessToken,
+          refreshToken,
         },
-        {new:true}
-    )
+        "User logged in successfully"
+      )
+    );
+});
 
-    const options={
-        httponly:true,
-        secure:true
-    }
+const logoutadmin = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: {
+        refreshtoken: 1,
+      },
+    },
+    { new: true }
+  );
 
-    return res
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiRes(200,{},"User logged out Successfully"))
+    .json(new ApiRes(200, {}, "User logged out successfully"));
 });
 
-
-
-export{
-    loginadmin,
-    logoutadmin
-}
+export { enterdata, loginadmin, logoutadmin };
