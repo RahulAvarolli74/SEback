@@ -1,36 +1,44 @@
 import mongoose, { Schema } from 'mongoose'
 import bcrypt from 'bcrypt'
 
-const userSchema=new Schema({
-    username:{
-        type:String,
-        required:true,
-        trim:true
+const userSchema = new Schema(
+  {
+    username: {
+      type: String,
+      trim: true,
+      // required only for Admin
     },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
-        trim:true
+    room_no: {
+      type: String,
+      trim: true,
+      // required only for Student
     },
-    password:{
-        type:String,
-        required:true,
-        trim:true
-    },
-    room_no:{
-        type:Schema.Types.ObjectId,
-        ref:"Room"
+    password: {
+      type: String,
+      required: true,
+      trim: true,
     },
     role: {
       type: String,
-      enum: ['STUDENT', 'ADMIN'],
+      enum: ["STUDENT", "ADMIN"],
       required: true,
     },
-    refreshtoken:{
-        type:String,
+    refreshtoken: {
+      type: String,
     },
-},{timestamps:true});
+  },
+  { timestamps: true }
+);
+
+userSchema.pre("validate", function (next) {
+  if (this.role === "STUDENT" && !this.room_no) {
+    return next(new Error("room_number required for STUDENT role"));
+  }
+  if (this.role === "ADMIN" && !this.username) {
+    return next(new Error("username required for ADMIN role"));
+  }
+  next();
+});
 
 
 userSchema.pre("save", async function () {

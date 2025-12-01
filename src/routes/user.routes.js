@@ -19,8 +19,8 @@ router.route('/login-student').post(loginStudent)
 router.route('/login-admin').post(loginadmin)
 
 //secured routes
-router.route('logout-student').post(verifyJWT,logoutStudent)
-router.route('logout-admin').post(verifyJWT,loginadmin)
+router.route('/logout-student').post(verifyJWT,logoutStudent)
+router.route('/logout-admin').post(verifyJWT,logoutadmin)
 
 
 

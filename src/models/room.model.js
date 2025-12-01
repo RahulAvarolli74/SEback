@@ -1,21 +1,30 @@
-import mongoose, { Schema } from 'mongoose'
+import mongoose, { Schema } from "mongoose";
 
-const roomSchema=new Schema({
-   room_no:{
-        type:String,
-        required:true
+const roomSchema = new Schema(
+  {
+    room_no: {
+      type: String,         
+      required: true,
+      trim: true,
+      unique: true,
     },
-    block:{
-        type:String,
-        required:true,
+    block: {
+      type: String,     
+      required: true,
+      trim: true,
     },
-    block:{
-        type:String,
-        required:true,
+    status: {
+      type: String,         
+      default: "ACTIVE",
+      trim: true,
     },
-    lockdays:{
-        type:Number
+    lock_days: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
-},{timestamps:true});
+  },
+  { timestamps: true }
+);
 
-export const Room=mongoose.model("Room",roomSchema);
+export const Room = mongoose.model("Room", roomSchema);

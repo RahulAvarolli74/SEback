@@ -33,14 +33,12 @@ const loginStudent=asyncHandler(async (req,res)=>{
     if(!(room_no||password)){
         throw new ApiError(400,"All fields are required")
     }
-    const userexist= await User.findOne({
-        room_no
-    })
+    const userexist = await User.findOne({ room_no, role: 'STUDENT' });
     if(!userexist){
         throw new ApiError(400, "User doesnot exit");
     }
 
-    const ispassvalid=await ispasswaordCorrect(password);
+const ispassvalid = await userexist.isPasswordCorrect(password);
      if(!ispassvalid){
         throw new ApiError(400,"Invalid Credentials.");
     }

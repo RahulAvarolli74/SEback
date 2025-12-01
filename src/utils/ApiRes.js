@@ -1,4 +1,4 @@
-class Apires extends Error {
+class ApiRes extends Error {
   constructor(
     statusCode,
     data,
@@ -12,4 +12,4 @@ class Apires extends Error {
   }
 }
 
-export { Apires };
+export { ApiRes };
