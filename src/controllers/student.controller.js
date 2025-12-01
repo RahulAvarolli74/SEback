@@ -22,19 +22,19 @@ const  generateAccessTokenandRefreshToken=async (id)=>{
    }
 }
 
-const loginadmin=asyncHandler(async (req,res)=>{
+const loginStudent=asyncHandler(async (req,res)=>{
     //load data from req body
     //roomno, password
     //check on both
     //refresh token for stu snd admin
     //send cookie
 
-    const{username,password}=req.body
-    if(!(username||password)){
+    const{room_no,password}=req.body
+    if(!(room_no||password)){
         throw new ApiError(400,"All fields are required")
     }
     const userexist= await User.findOne({
-        username
+        room_no
     })
     if(!userexist){
         throw new ApiError(400, "User doesnot exit");
@@ -66,7 +66,7 @@ const loginadmin=asyncHandler(async (req,res)=>{
     )
 });
 
-const logoutadmin=asyncHandler(async(req,res)=>{
+const logoutStudent=asyncHandler(async(req,res)=>{
     //find the user 
     //clear tokens
     await User.findByIdAndUpdate(
@@ -94,6 +94,6 @@ const logoutadmin=asyncHandler(async(req,res)=>{
 
 
 export{
-    loginadmin,
-    logoutadmin
+    loginStudent,
+    logoutStudent
 }
