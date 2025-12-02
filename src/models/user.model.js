@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose'
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 const userSchema = new Schema(
   {
@@ -30,15 +31,15 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-userSchema.pre("validate", function (next) {
-  if (this.role === "STUDENT" && !this.room_no) {
-    return next(new Error("room_number required for STUDENT role"));
-  }
-  if (this.role === "ADMIN" && !this.username) {
-    return next(new Error("username required for ADMIN role"));
-  }
-  next();
-});
+// userSchema.pre("validate", function (next) {
+//   if (this.role === "STUDENT" && !this.room_no) {
+//     return next(new Error("room_number required for STUDENT role"));
+//   }
+//   if (this.role === "ADMIN" && !this.username) {
+//     return next(new Error("username required for ADMIN role"));
+//   }
+//   next();
+// });
 
 
 userSchema.pre("save", async function () {
@@ -55,7 +56,7 @@ userSchema.methods.generateAccessToken= function(){
     return jwt.sign(
         {
             _id:this._id,
-            username:this.username,
+            // username:this.username,
         },
         process.env.ACCESS_TOKEN_SECRET,
         {

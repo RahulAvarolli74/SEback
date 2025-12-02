@@ -2,19 +2,30 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiRes } from "../utils/ApiRes.js";
 import { User } from "../models/user.model.js";
+const generateAccessTokenandRefreshToken = async (id) => {
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      throw new ApiError(404, "User not found while generating tokens");
+    }
 
-const generateAccessTokenAndRefreshToken = async (id) => {
-  const user = await User.findById(id);
-  if (!user) throw new ApiError(404, "User not found");
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
-  const accessToken = user.generateAccessToken();
-  const refreshToken = user.generateRefreshToken();
+    user.refreshtoken = refreshToken;
+    
+    await user.save({ validateBeforeSave: false });
 
-  user.refreshtoken = refreshToken;
-  await user.save({ validateBeforeSave: false });
-
-  return { accessToken, refreshToken };
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error("Token generation error:", error);   
+    throw new ApiError(
+      500,
+      "Something went wrong while generating access & refresh tokens"
+    );
+  }
 };
+
 
 // STUDENT LOGIN
 const loginStudent = asyncHandler(async (req, res) => {
@@ -41,7 +52,7 @@ const loginStudent = asyncHandler(async (req, res) => {
   }
 
   const { accessToken, refreshToken } =
-    await generateAccessTokenAndRefreshToken(userexist._id);
+    await generateAccessTokenandRefreshToken(userexist._id);
 
   const options = {
     httpOnly: true,

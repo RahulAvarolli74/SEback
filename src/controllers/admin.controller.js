@@ -8,49 +8,47 @@ import { User } from "../models/user.model.js";
 const generateAccessTokenandRefreshToken = async (id) => {
   try {
     const user = await User.findById(id);
+    if (!user) {
+      throw new ApiError(404, "User not found while generating tokens");
+    }
 
-    const genaccesstoken = user.generateAccessToken();
-    const genrefreshtoken = user.generateRefreshToken();
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
-    user.refreshtoken = genrefreshtoken;
+    user.refreshtoken = refreshToken;
+    
     await user.save({ validateBeforeSave: false });
 
-    return { accessToken: genaccesstoken, refreshToken: genrefreshtoken };
+    return { accessToken, refreshToken };
   } catch (error) {
+    console.error("Token generation error:", error);   
     throw new ApiError(
       500,
-      "Something went wrong while generating access token and refresh token"
+      "Something went wrong while generating access & refresh tokens"
     );
   }
 };
 
-// ADMIN: create room credentials (room_no + password) in `users` collection
-// room_no will be stored in `username`, password will be hashed with bcrypt
-const enterdata = asyncHandler(async (req, res) => {
-  const { room_no, password } = req.body;
 
-  // basic validation
+
+// ADMIN: create STUDENT room credentials (room_no + password) in `users` collection
+const createStudentRoom = asyncHandler(async (req, res) => {
+  const { room_no, password } = req.body;
+  
   if (!room_no || !password) {
     throw new ApiError(400, "room_no and password are required");
   }
 
-  // check if room already exists
-  const existing = await User.findOne({ username: room_no });
+  const existing = await User.findOne({ room_no, role: "STUDENT" });
   if (existing) {
     throw new ApiError(409, "Room already exists in the database");
   }
 
-  // hash password
-  const saltRounds = 10;
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-  // create user entry for this room
+  // DO NOT hash here – pre('save') in the model already hashes password
   const user = await User.create({
-    username: room_no,       // you’ll use this as username during login
-    password: hashedPassword,
-    // you can add extra fields if your schema supports them, e.g.:
-    role: "student",
-    // roomNo: room_no,
+    room_no,
+    password,          
+    role: "STUDENT",  
   });
 
   return res.status(201).json(
@@ -59,13 +57,15 @@ const enterdata = asyncHandler(async (req, res) => {
       {
         user: {
           _id: user._id,
-          username: user.username,
+          room_no: user.room_no,
+          role: user.role,
         },
       },
-      "Room credentials created successfully"
+      "Student room credentials created successfully"
     )
   );
 });
+
 
 const loginadmin = asyncHandler(async (req, res) => {
   const { username, password } = req.body;
@@ -78,7 +78,7 @@ const loginadmin = asyncHandler(async (req, res) => {
     throw new ApiError(400, "User does not exist");
   }
 
-  const ispassvalid = await userexist.ispasswaordCorrect(password);
+  const ispassvalid = await userexist.ispasswordCorrect(password);
   if (!ispassvalid) {
     throw new ApiError(400, "Invalid Credentials.");
   }
@@ -133,4 +133,8 @@ const logoutadmin = asyncHandler(async (req, res) => {
     .json(new ApiRes(200, {}, "User logged out successfully"));
 });
 
-export { enterdata, loginadmin, logoutadmin };
+export { 
+  createStudentRoom, 
+  loginadmin, 
+  logoutadmin 
+};
