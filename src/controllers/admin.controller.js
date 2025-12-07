@@ -31,7 +31,6 @@ const generateAccessTokenandRefreshToken = async (id) => {
 
 
 
-// ADMIN: create STUDENT room credentials (room_no + password) in `users` collection
 const createStudentRoom = asyncHandler(async (req, res) => {
   const { room_no, password } = req.body;
   
@@ -44,7 +43,6 @@ const createStudentRoom = asyncHandler(async (req, res) => {
     throw new ApiError(409, "Room already exists in the database");
   }
 
-  // DO NOT hash here – pre('save') in the model already hashes password
   const user = await User.create({
     room_no,
     password,          

@@ -8,11 +8,10 @@ const userSchema = new Schema(
       type: String,
       trim: true,
       // required only for Admin
-    },
+    }, 
     room_no: {
       type: String,
       trim: true,
-      // required only for Student
     },
     password: {
       type: String,
@@ -27,6 +26,7 @@ const userSchema = new Schema(
     refreshtoken: {
       type: String,
     },
+    
   },
   { timestamps: true }
 );

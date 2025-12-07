@@ -9,7 +9,7 @@ const feedSchema=new Schema({
         type:String,
         trim:true
     },
-    room_no:{
+    room_id:{
         type:Schema.Types.ObjectId,
         ref:"Room"
     },
