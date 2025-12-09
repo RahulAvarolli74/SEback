@@ -6,12 +6,13 @@ const roomSchema = new Schema(
       type: String,         
       required: true,
       trim: true,
-      unique: true,
+      unique: true
     },
     block: {
       type: String,     
       required: true,
       trim: true,
+      uppercase: true,
     },
     status: {
       type: String,         

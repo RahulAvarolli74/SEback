@@ -2,6 +2,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiRes } from "../utils/ApiRes.js";
 import { User } from "../models/user.model.js";
+
+// --- NEW IMPORTS (Required for Dashboard) ---
+import { CleanLog } from "../models/cleanlog.model.js"; 
+import { Feedback } from "../models/feedback.model.js"; 
+// --------------------------------------------
+
 const generateAccessTokenandRefreshToken = async (id) => {
   try {
     const user = await User.findById(id);
@@ -102,4 +108,44 @@ const logoutStudent = asyncHandler(async (req, res) => {
     .json(new ApiRes(200, {}, "Student logged out successfully"));
 });
 
-export { loginStudent,logoutStudent };
+
+// NEW FEATURE: STUDENT DASHBOARD
+const getStudentDashboard = asyncHandler(async (req, res) => {
+  // req.user is set by the verifyJWT middleware
+  const studentId = req.user._id;
+
+  // 1. Fetch the most recent cleaning log for this student
+  const lastCleaning = await CleanLog.findOne({ student: studentId })
+    .sort({ createdAt: -1 }) // Sort descending (newest first)
+    .limit(1);
+
+  // 2. Fetch count of active (unresolved) issues
+  const activeIssuesCount = await Feedback.countDocuments({
+    student: studentId,
+    status: { $ne: "Resolved" } // Count everything that is NOT "Resolved"
+  });
+
+  return res.status(200).json(
+    new ApiRes(
+      200,
+      {
+        room_no: req.user.room_no,
+        role: req.user.role,
+        last_cleaning: lastCleaning ? {
+             status: lastCleaning.status,
+             date: lastCleaning.createdAt,
+             worker_id: lastCleaning.worker
+        } : null,
+        active_issues: activeIssuesCount
+      },
+      "Student dashboard data fetched successfully"
+    )
+  );
+});
+
+
+export { 
+  loginStudent, 
+  logoutStudent, 
+  getStudentDashboard
+ };

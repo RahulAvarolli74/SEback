@@ -12,6 +12,7 @@ const userSchema = new Schema(
     room_no: {
       type: String,
       trim: true,
+      uppercase: true
     },
     password: {
       type: String,
