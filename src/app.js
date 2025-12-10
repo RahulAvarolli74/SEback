@@ -31,5 +31,8 @@ import userRouter from './routes/user.routes.js'
 // routes declaration
 app.use('/api/v1/users',userRouter)//goes to user routes where we declare other routes for user --login,register,...
 
+import adminRouter from './routes/admin.routes.js';
+
+app.use("/api/v1/admin", adminRouter);
 
 export {app}
