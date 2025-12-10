@@ -15,6 +15,16 @@ const workerSchema=new Schema({
         min: 1,
         max: 5, 
         required: true,
+    },
+    phone:{
+        type:Number,
+        required:true,
+        trim:true
+    },
+    status:{
+        type:String,
+        enum:["Active","Inactive","Disabled"],
+        default:"Active"
     }
 },{timestamps:true});
 

@@ -2,8 +2,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiRes } from "../utils/ApiRes.js";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";           
+import bcrypt from "bcrypt";
 import { User } from "../models/user.model.js";
+
+import { Worker } from "../models/worker.model.js";
+import { Feedback } from "../models/feedback.model.js"; // This handles "Issues"
+import { CleanLog } from "../models/cleanlog.model.js";
 
 const generateAccessTokenandRefreshToken = async (id) => {
   try {
@@ -16,12 +20,12 @@ const generateAccessTokenandRefreshToken = async (id) => {
     const refreshToken = user.generateRefreshToken();
 
     user.refreshtoken = refreshToken;
-    
+
     await user.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
   } catch (error) {
-    console.error("Token generation error:", error);   
+    console.error("Token generation error:", error);
     throw new ApiError(
       500,
       "Something went wrong while generating access & refresh tokens"
@@ -29,11 +33,9 @@ const generateAccessTokenandRefreshToken = async (id) => {
   }
 };
 
-
-
 const createStudentRoom = asyncHandler(async (req, res) => {
   const { room_no, password } = req.body;
-  
+
   if (!room_no || !password) {
     throw new ApiError(400, "room_no and password are required");
   }
@@ -45,8 +47,8 @@ const createStudentRoom = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     room_no,
-    password,          
-    role: "STUDENT",  
+    password,
+    role: "STUDENT",
   });
 
   return res.status(201).json(
@@ -63,7 +65,6 @@ const createStudentRoom = asyncHandler(async (req, res) => {
     )
   );
 });
-
 
 const loginadmin = asyncHandler(async (req, res) => {
   const { username, password } = req.body;
@@ -131,8 +132,114 @@ const logoutadmin = asyncHandler(async (req, res) => {
     .json(new ApiRes(200, {}, "User logged out successfully"));
 });
 
-export { 
-  createStudentRoom, 
-  loginadmin, 
-  logoutadmin 
+//  UPDATED ADMIN DASHBOARD CONTROLLER
+
+const getAdminDashboard = asyncHandler(async (req, res) => {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const lastWeekStart = new Date();
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+  // --- 1. RUN PARALLEL QUERIES FOR STATS CARDS ---
+  const [
+    totalWorkers,
+    cleaningsToday,
+    weeklySubmissions,
+    openIssues
+  ] = await Promise.all([
+    Worker.countDocuments(),
+    Log.countDocuments({ createdAt: { $gte: todayStart } }),
+    Log.countDocuments({ createdAt: { $gte: lastWeekStart } }),
+    Feedback.countDocuments({ status: { $in: ["Open", "In Progress"] } })
+  ]);
+
+  // --- 2. WORKER PERFORMANCE CHART (Bar Chart) ---
+  const workerPerformance = await Log.aggregate([
+    {
+      $group: {
+        _id: "$worker", // <--- MATCHES YOUR MODEL FIELD "worker"
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $lookup: { 
+        from: "workers", 
+        localField: "_id",
+        foreignField: "_id",
+        as: "workerInfo"
+      }
+    },
+    { $unwind: "$workerInfo" },
+    {
+      $project: {
+        name: "$workerInfo.name",
+        count: 1,
+        _id: 0
+      }
+    },
+    { $sort: { count: -1 } },
+    { $limit: 5 }
+  ]);
+
+  // --- 3. TASK DISTRIBUTION CHART (Donut Chart) ---
+  const taskDistribution = await Log.aggregate([
+    { $unwind: "$cleaningType" }, // <--- MATCHES YOUR MODEL FIELD "cleaningType"
+    {
+      $group: {
+        _id: "$cleaningType",
+        value: { $sum: 1 }
+      }
+    },
+    {
+      $project: {
+        name: "$_id",
+        value: 1,
+        _id: 0
+      }
+    }
+  ]);
+
+  // --- 4. WEEKLY TREND (Line Chart) ---
+  const weeklyTrend = await Log.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: lastWeekStart }
+      }
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+
+  return res.status(200).json(
+    new ApiRes(
+      200,
+      {
+        stats: {
+          totalWorkers,
+          cleaningsToday,
+          weeklySubmissions,
+          openIssues
+        },
+        charts: {
+          workerPerformance,
+          taskDistribution,
+          weeklyTrend
+        }
+      },
+      "Admin Dashboard data fetched successfully"
+    )
+  );
+});
+
+export {
+  createStudentRoom,
+  loginadmin,
+  logoutadmin,
+  getAdminDashboard 
 };
