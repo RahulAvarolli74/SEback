@@ -29,7 +29,7 @@ import userRouter from './routes/user.routes.js'
 
 // console.log("Loaded routers:", userRouter);
 // routes declaration
-app.use('/api/v1/users',userRouter)//goes to user routes where we declare other routes for user --login,register,...
+app.use('/api/v1/students',userRouter)//goes to user routes where we declare other routes for user --login,register,...
 
 import adminRouter from './routes/admin.routes.js';
 

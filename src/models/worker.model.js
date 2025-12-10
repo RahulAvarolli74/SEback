@@ -1,12 +1,12 @@
 import mongoose, { Schema } from 'mongoose'
 
 const workerSchema=new Schema({
-    username:{
+    name:{
         type:String,
         required:true,
         trim:true
     },
-    block:{
+    assigned_block:{
         type:String,
         required:true
     },
@@ -14,7 +14,6 @@ const workerSchema=new Schema({
         type:Number,
         min: 1,
         max: 5, 
-        required: true,
     },
     phone:{
         type:Number,

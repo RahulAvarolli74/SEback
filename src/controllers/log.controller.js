@@ -5,14 +5,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const submitCleaningLog = asyncHandler(async (req, res) => {
-    const { worker_id, tasks, feedback, rating } = req.body;
+    const { worker, cleaningType, feedback, rating } = req.body;
     
     const room_no = req.user.room_no; 
     const room_id = req.user._id; 
 
     // 3. Validation
-    if (!worker_id) throw new ApiError(400, "Worker selection is required");
-    if (!tasks || tasks.length === 0) throw new ApiError(400, "At least one task must be selected");
+    if (!worker) throw new ApiError(400, "Worker selection is required");
+    if (!cleaningType || cleaningType.length === 0) throw new ApiError(400, "At least one task must be selected");
 
     // 4. IMAGE UPLOAD LOGIC
     let imageLocalPath;
@@ -24,8 +24,9 @@ const submitCleaningLog = asyncHandler(async (req, res) => {
     if (imageLocalPath) {
         const uploadResponse = await uploadOnCloudinary(imageLocalPath);
         if (uploadResponse) {
-             imageURL = uploadResponse.url; // <--- Extract .url property
+             imageURL = uploadResponse.url;
         }
+        console.log(imageURL);
     }
 
     // 5. Duplicate Check (Prevent submitting twice in one day)
@@ -43,13 +44,11 @@ const submitCleaningLog = asyncHandler(async (req, res) => {
         throw new ApiError(409, "You have already submitted a cleaning log for today!");
     }
 
-    // 6. Create Log
-    // We map frontend field names to Schema field names here
     const newLog = await Log.create({
         room_id: room_id,          
         room_no: room_no,          
-        worker: worker_id,        
-        cleaningType: tasks,       
+        worker: worker,        
+        cleaningType: cleaningType,       
         cleanstatus: "Verified",   
         feedback: feedback || "",  
         rating: rating || null,   

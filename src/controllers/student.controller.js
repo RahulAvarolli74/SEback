@@ -2,8 +2,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiRes } from "../utils/ApiRes.js";
 import { User } from "../models/user.model.js";
-import { CleanLog } from "../models/cleanlog.model.js"; 
-import { Feedback } from "../models/feedback.model.js"; 
+import { Log } from "../models/cleanlog.model.js"; 
+import { Issue } from "../models/issue.model.js"; 
+// import { Feedback } from "../models/feedback.model.js"; 
 
 
 const generateAccessTokenandRefreshToken = async (id) => {
@@ -108,7 +109,7 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
   const room_no = req.user.room_no;
 
   // 1. Last Cleaning Date
-  const lastCleaningLog = await CleanLog.findOne({ room_no })
+  const lastCleaningLog = await Log.findOne({ room_no })
     .sort({ createdAt: -1 });
 
   // 2. This Month's Cleanings
@@ -116,7 +117,7 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
   startOfMonth.setDate(1); 
   startOfMonth.setHours(0, 0, 0, 0);
   
-  const monthCount = await CleanLog.countDocuments({
+  const monthCount = await Log.countDocuments({
     room_no: room_no,
     createdAt: { $gte: startOfMonth }
   });
@@ -126,7 +127,7 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
     status: { $in: ["Open", "In Progress"] } 
   });
 
-  const recentActivity = await CleanLog.find({ room_no })
+  const recentActivity = await Log.find({ room_no })
     .sort({ createdAt: -1 })
     .limit(3)
     .populate("worker_id", "name"); 
