@@ -1,38 +1,36 @@
 import { Router } from "express";
-import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { verifyAdmin } from '../middlewares/auth.middleware.js'; // Ensure you export this from auth middleware
+import { verifyJWT, verifyAdmin } from '../middlewares/auth.middleware.js';
 
-// Import Controllers
+// 1. Admin Auth & Dashboard Imports
 import {
     loginadmin,
     logoutadmin,
     createStudentRoom,
-    getAdminDashboard,
-    getIssuesByRoom
+    getAdminDashboard
 } from '../controllers/admin.controller.js';
 
+// 2. Log Imports
 import { getAllLogs } from "../controllers/log.controller.js";
 
+// 3. Worker Imports
 import { 
     getWorkersWithStats, 
     toggleWorkerStatus,
     addWorker          
 } from "../controllers/worker.controller.js";
 
+// 4. Issue Imports (CORRECTED: All issue logic comes from issue.controller.js)
 import { 
     getAllIssues,       
-    resolveIssue 
-} from "../controllers/feedback.controller.js"; 
+    resolveIssue,
+    getIssuesByRoom 
+} from "../controllers/issue.controller.js"; 
 
 const router = Router();
 
-
-// PUBLIC ROUTES
 router.route('/login').post(loginadmin);
 
-// SECURED ROUTES (JWT + ADMIN CHECK)
 
-// Note: verifyAdmin must come AFTER verifyJWT
 
 // Auth
 router.route('/logout').post(verifyJWT, verifyAdmin, logoutadmin);
@@ -52,6 +50,11 @@ router.route('/workers/:id/toggle').patch(verifyJWT, verifyAdmin, toggleWorkerSt
 // Issue Management
 router.route('/issues').get(verifyJWT, verifyAdmin, getAllIssues);               
 router.route('/issues/room/:room_no').get(verifyJWT, verifyAdmin, getIssuesByRoom); 
+
+// Note: Ensure your frontend sends 'status' and 'adminResponse' in the body
+// and the controller uses req.params.issueId (if defined as /:issueId) 
+// OR req.body.issueId. 
+// Based on this route path, the ID is in the URL:
 router.route('/issues/:issueId/resolve').patch(verifyJWT, verifyAdmin, resolveIssue); 
 
 export default router;

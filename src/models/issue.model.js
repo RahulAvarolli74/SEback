@@ -7,21 +7,13 @@ const issueSchema = new Schema(
       required: true,
       index: true // Helps search faster when Admin filters by room
     },
-    room_id:{
-        type:Schema.Types.ObjectId,
-        ref:"User"
+    room_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
     },
     issueType: {
       type: String,
-      required: true,
-      // Based on your UI tags
-      enum: [
-        "Poor Cleaning Quality", 
-        "Missed Cleaning Schedule", 
-        "Worker Behavior", 
-        "Equipment/Supplies Issue",
-        "Other"
-      ] 
+      required: true
     },
     description: {
       type: String,
@@ -29,7 +21,7 @@ const issueSchema = new Schema(
       trim: true
     },
     image: {
-      type: String, 
+      type: String,
       default: ""
     },
     status: {
@@ -39,7 +31,7 @@ const issueSchema = new Schema(
     },
     adminResponse: {
       type: String,
-      default: "Progress" // Initially empty; Admin fills this later
+      default: "Progress"
     }
   },
   {

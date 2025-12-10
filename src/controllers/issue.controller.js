@@ -4,10 +4,11 @@ import { ApiRes } from "../utils/ApiRes.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-
+// STUDENT: Raise Issue
 const raiseIssue = asyncHandler(async (req, res) => {
     const { issueType, description } = req.body;
     const room_no = req.user.room_no;
+    const room_id = req.user._id; // <--- REQUIRED by Schema
 
     if (!issueType || !description) {
         throw new ApiError(400, "Issue Type and Description are required");
@@ -21,15 +22,19 @@ const raiseIssue = asyncHandler(async (req, res) => {
 
     let imageURL = "";
     if (imageLocalPath) {
-        imageURL = await uploadOnCloudinary(imageLocalPath);
+        const uploadResponse = await uploadOnCloudinary(imageLocalPath);
+        if (uploadResponse) {
+            imageURL = uploadResponse.url;
+        }
     }
 
     // 2. Create Issue
     const newIssue = await Issue.create({
-        room_no,
+        room_id: room_id, // Link to User ID
+        room_no: room_no,
         issueType,
         description,
-        image: imageURL ? imageURL.url : "", // Ensure we store the URL string if it exists
+        image: imageURL, 
         status: "Open"
     });
 
@@ -38,8 +43,10 @@ const raiseIssue = asyncHandler(async (req, res) => {
     );
 });
 
+// STUDENT: Get My Issues
 const getMyIssues = asyncHandler(async (req, res) => {
     const room_no = req.user.room_no;
+    
     const issues = await Issue.find({ room_no }).sort({ createdAt: -1 });
 
     return res.status(200).json(
@@ -49,27 +56,22 @@ const getMyIssues = asyncHandler(async (req, res) => {
 
 // --- ADMIN CONTROLLERS ---
 
-// 1. Get Issues for a Specific Room
+// ADMIN: Get Issues for a Specific Room
 const getIssuesByRoom = asyncHandler(async (req, res) => {
-    const { room_no } = req.params; // Admin sends room number in URL
+    const { room_no } = req.params; 
 
     if (!room_no) {
         throw new ApiError(400, "Room number is required");
     }
 
-    // Direct lookup since your Issue model stores 'room_no'
     const issues = await Issue.find({ room_no }).sort({ createdAt: -1 });
-
-    if (!issues.length) {
-        return res.status(200).json(new ApiRes(200, [], "No issues found for this room"));
-    }
 
     return res.status(200).json(
         new ApiRes(200, issues, `Issues for room ${room_no} fetched successfully`)
     );
 });
 
-// 2. Get ALL Issues (For the main Admin Issue Dashboard)
+// ADMIN: Get ALL Issues
 const getAllIssues = asyncHandler(async (req, res) => {
     const issues = await Issue.find().sort({ createdAt: -1 });
 
@@ -78,24 +80,24 @@ const getAllIssues = asyncHandler(async (req, res) => {
     );
 });
 
-// 3. Resolve/Update an Issue (Admin replying and closing)
+// ADMIN: Resolve/Update an Issue
 const resolveIssue = asyncHandler(async (req, res) => {
-    const { issueId } = req.params;
+    const issueId = req.params.issueId || req.body.issueId; // Usually sent in body for updates, or req.params
     const { status, adminResponse } = req.body;
 
-    if (!status) {
-        throw new ApiError(400, "Status is required");
+    if (!issueId || !status) {
+        throw new ApiError(400, "Issue ID and Status are required");
     }
 
     const updatedIssue = await Issue.findByIdAndUpdate(
         issueId,
         {
             $set: {
-                status: status, // e.g., "Resolved", "In Progress"
-                adminResponse: adminResponse || "" // Optional admin comment
+                status: status, // e.g., "Resolved", "In Progress", "Closed"
+                adminResponse: adminResponse || "" 
             }
         },
-        { new: true } // Return the updated document
+        { new: true }
     );
 
     if (!updatedIssue) {

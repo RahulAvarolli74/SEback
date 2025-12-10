@@ -7,7 +7,7 @@ const userSchema = new Schema(
     username: {
       type: String,
       trim: true,
-      // required only for Admin
+      
     }, 
     room_no: {
       type: String,

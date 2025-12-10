@@ -17,7 +17,7 @@ import {
 import { 
     raiseIssue, 
     getMyIssues 
-} from "../controllers/feedback.controller.js"; // Or issue.controller.js
+} from "../controllers/issue.controller.js"; // Or issue.controller.js
 
 const router = Router();
 

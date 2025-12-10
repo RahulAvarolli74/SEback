@@ -6,8 +6,9 @@ import bcrypt from "bcrypt";
 import { User } from "../models/user.model.js";
 
 import { Worker } from "../models/worker.model.js";
-import { Feedback } from "../models/feedback.model.js"; // This handles "Issues"
-import { CleanLog } from "../models/cleanlog.model.js";
+// import { Feedback } from "../models/feedback.model.js"; // This handles "Issues"
+import { Log } from "../models/cleanlog.model.js";
+import { Issue } from "../models/issue.model.js";
 
 const generateAccessTokenandRefreshToken = async (id) => {
   try {
@@ -132,7 +133,6 @@ const logoutadmin = asyncHandler(async (req, res) => {
     .json(new ApiRes(200, {}, "User logged out successfully"));
 });
 
-//  UPDATED ADMIN DASHBOARD CONTROLLER
 
 const getAdminDashboard = asyncHandler(async (req, res) => {
   const todayStart = new Date();
@@ -141,24 +141,23 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
   const lastWeekStart = new Date();
   lastWeekStart.setDate(lastWeekStart.getDate() - 7);
 
-  // --- 1. RUN PARALLEL QUERIES FOR STATS CARDS ---
   const [
     totalWorkers,
     cleaningsToday,
     weeklySubmissions,
-    openIssues
+    pendingIssues 
   ] = await Promise.all([
     Worker.countDocuments(),
     Log.countDocuments({ createdAt: { $gte: todayStart } }),
     Log.countDocuments({ createdAt: { $gte: lastWeekStart } }),
-    Feedback.countDocuments({ status: { $in: ["Open", "In Progress"] } })
+    Issue.countDocuments({ status: { $in: ["Open", "In Progress"] } })
   ]);
 
-  // --- 2. WORKER PERFORMANCE CHART (Bar Chart) ---
+  // 3. Worker Performance Chart
   const workerPerformance = await Log.aggregate([
     {
       $group: {
-        _id: "$worker", // <--- MATCHES YOUR MODEL FIELD "worker"
+        _id: "$worker", 
         count: { $sum: 1 }
       }
     },
@@ -182,13 +181,14 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
     { $limit: 5 }
   ]);
 
-  // --- 3. TASK DISTRIBUTION CHART (Donut Chart) ---
+  // 4. Task Distribution Chart
+  // Uses field 'cleaningType' (Array of Strings) from your Log schema
   const taskDistribution = await Log.aggregate([
-    { $unwind: "$cleaningType" }, // <--- MATCHES YOUR MODEL FIELD "cleaningType"
-    {
-      $group: {
-        _id: "$cleaningType",
-        value: { $sum: 1 }
+    { $unwind: "$cleaningType" }, // Deconstructs the array (e.g. ["Sweeping", "Mopping"] becomes 2 docs)
+    { 
+      $group: { 
+        _id: "$cleaningType", 
+        value: { $sum: 1 } 
       }
     },
     {
@@ -200,7 +200,7 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
     }
   ]);
 
-  // --- 4. WEEKLY TREND (Line Chart) ---
+  // 5. Weekly Trend Chart
   const weeklyTrend = await Log.aggregate([
     {
       $match: {
@@ -216,6 +216,14 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
     { $sort: { _id: 1 } }
   ]);
 
+  // 6. Recent Issues List (From ISSUE model)
+  const recentIssues = await Issue.find({
+    status: { $in: ["Open", "In Progress"] }
+  })
+  .sort({ createdAt: -1 })
+  .limit(5)
+  .select("room_no issueType description status createdAt");
+
   return res.status(200).json(
     new ApiRes(
       200,
@@ -224,13 +232,14 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
           totalWorkers,
           cleaningsToday,
           weeklySubmissions,
-          openIssues
+          pendingIssues
         },
         charts: {
           workerPerformance,
           taskDistribution,
           weeklyTrend
-        }
+        },
+        recentIssues: recentIssues
       },
       "Admin Dashboard data fetched successfully"
     )

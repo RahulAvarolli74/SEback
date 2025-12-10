@@ -2,27 +2,21 @@ import mongoose, { Schema } from "mongoose";
 
 const cleanlogSchema = new Schema(
   {
-    // 1. IDs (Foreign Keys)
     room_id: {
       type: Schema.Types.ObjectId,
-      ref: "User", // References the Student/User who owns the room
+      ref: "User",
       required: true,
     },
     worker: {
       type: Schema.Types.ObjectId,
-      ref: "Worker", // References the Worker collection
+      ref: "Worker", 
       required: true,
     },
-
-    // 2. REQUIRED FOR DONUT CHART (Task Distribution)
-    // This MUST be an Array of Strings to handle multiple checkboxes
     cleaningType: {
       type: [String], 
       required: true, 
       enum: ["Sweeping", "Room Cleaning", "Bathroom Cleaning", "Corridor Cleaning"],
     },
-
-    // 3. REQUIRED FOR LOGS TABLE & UI
     cleanstatus: {
       type: String,
       enum: ["Pending", "Completed", "Verified"], 
@@ -45,7 +39,7 @@ const cleanlogSchema = new Schema(
       default: null 
     },
     image: {
-      type: String, // Stores Cloudinary URL
+      type: String, 
       default: ""
     }
   },

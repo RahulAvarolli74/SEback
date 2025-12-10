@@ -2,11 +2,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiRes } from "../utils/ApiRes.js";
 import { User } from "../models/user.model.js";
-
-// --- NEW IMPORTS (Required for Dashboard) ---
 import { CleanLog } from "../models/cleanlog.model.js"; 
 import { Feedback } from "../models/feedback.model.js"; 
-// --------------------------------------------
+
 
 const generateAccessTokenandRefreshToken = async (id) => {
   try {
@@ -32,8 +30,6 @@ const generateAccessTokenandRefreshToken = async (id) => {
   }
 };
 
-
-// STUDENT LOGIN
 const loginStudent = asyncHandler(async (req, res) => {
   const { room_no, password } = req.body;
 
@@ -86,7 +82,6 @@ const loginStudent = asyncHandler(async (req, res) => {
     );
 });
 
-// STUDENT LOGOUT
 const logoutStudent = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user?._id,
@@ -109,43 +104,52 @@ const logoutStudent = asyncHandler(async (req, res) => {
 });
 
 
-// NEW FEATURE: STUDENT DASHBOARD
 const getStudentDashboard = asyncHandler(async (req, res) => {
-  // req.user is set by the verifyJWT middleware
-  const studentId = req.user._id;
+  const room_no = req.user.room_no;
 
-  // 1. Fetch the most recent cleaning log for this student
-  const lastCleaning = await CleanLog.findOne({ student: studentId })
-    .sort({ createdAt: -1 }) // Sort descending (newest first)
-    .limit(1);
+  // 1. Last Cleaning Date
+  const lastCleaningLog = await CleanLog.findOne({ room_no })
+    .sort({ createdAt: -1 });
 
-  // 2. Fetch count of active (unresolved) issues
-  const activeIssuesCount = await Feedback.countDocuments({
-    student: studentId,
-    status: { $ne: "Resolved" } // Count everything that is NOT "Resolved"
+  // 2. This Month's Cleanings
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1); 
+  startOfMonth.setHours(0, 0, 0, 0);
+  
+  const monthCount = await CleanLog.countDocuments({
+    room_no: room_no,
+    createdAt: { $gte: startOfMonth }
   });
+
+  const openIssuesCount = await Issue.countDocuments({
+    room_no: room_no,
+    status: { $in: ["Open", "In Progress"] } 
+  });
+
+  const recentActivity = await CleanLog.find({ room_no })
+    .sort({ createdAt: -1 })
+    .limit(3)
+    .populate("worker_id", "name"); 
 
   return res.status(200).json(
     new ApiRes(
       200,
       {
-        room_no: req.user.room_no,
-        role: req.user.role,
-        last_cleaning: lastCleaning ? {
-             status: lastCleaning.status,
-             date: lastCleaning.createdAt,
-             worker_id: lastCleaning.worker
-        } : null,
-        active_issues: activeIssuesCount
+        room_no: room_no,
+        stats: {
+             lastCleaningDate: lastCleaningLog ? lastCleaningLog.createdAt : null,
+             monthCount: monthCount,
+             openIssues: openIssuesCount
+        },
+        recentActivity: recentActivity 
       },
       "Student dashboard data fetched successfully"
     )
   );
 });
 
-
 export { 
   loginStudent, 
   logoutStudent, 
   getStudentDashboard
- };
+};
