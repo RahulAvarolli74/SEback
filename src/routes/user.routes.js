@@ -19,20 +19,20 @@ import {
     getMyIssues 
 } from "../controllers/issue.controller.js"; // Or issue.controller.js
 
+import {
+    getActiveWorkersList
+} from "../controllers/worker.controller.js";
 const router = Router();
 
-
 router.route('/login').post(loginStudent);
-
-//private routes
 
 
 router.route('/logout').post(verifyJWT, logoutStudent);
 
-// Dashboard
+
 router.route('/dashboard').get(verifyJWT, getStudentDashboard);
 
-// Cleaning Operations
+
 router.route('/submit-cleaning').post(
     verifyJWT, 
     upload.single("image"), 
@@ -47,5 +47,6 @@ router.route('/raise-issue').post(
     raiseIssue
 );
 router.route('/my-issues').get(verifyJWT, getMyIssues);
+router.route('/workers').get(verifyJWT, getActiveWorkersList);
 
 export default router;

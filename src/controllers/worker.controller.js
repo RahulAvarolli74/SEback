@@ -72,4 +72,12 @@ const toggleWorkerStatus = asyncHandler(async (req, res) => {
     );
 });
 
-export { addWorker, getWorkersWithStats, toggleWorkerStatus };
+const getActiveWorkersList = asyncHandler(async (req, res) => {
+    const workers = await Worker.find({ status: "Active" }).select("_id name");
+    return res.status(200).json(
+        new ApiRes(200, workers, "Active workers fetched successfully")
+    );
+});
+
+// Update exports
+export { addWorker, getWorkersWithStats, toggleWorkerStatus, getActiveWorkersList };

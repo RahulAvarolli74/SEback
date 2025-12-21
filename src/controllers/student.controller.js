@@ -136,7 +136,7 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
   const recentActivity = await Log.find({ room_no })
     .sort({ createdAt: -1 })
     .limit(3)
-    .populate("worker_id", "name");
+    .populate("worker", "name");
 
   return res.status(200).json(
     new ApiRes(
