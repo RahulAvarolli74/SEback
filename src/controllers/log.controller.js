@@ -1,20 +1,25 @@
-import { Log } from "../models/cleanlog.model.js"; // Ensure filename matches
+import { Log } from "../models/cleanlog.model.js"; 
 import { ApiError } from "../utils/ApiError.js";
 import { ApiRes } from "../utils/ApiRes.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const submitCleaningLog = asyncHandler(async (req, res) => {
-    const { worker, cleaningType, feedback, rating } = req.body;
+    let { worker, cleaningType, feedback, rating } = req.body;
     
     const room_no = req.user.room_no; 
     const room_id = req.user._id; 
 
-    // 3. Validation
+    // FIX: Force cleaningType to be an array if it's a single string
+    if (cleaningType && !Array.isArray(cleaningType)) {
+        cleaningType = [cleaningType];
+    }
+
+    // Validation
     if (!worker) throw new ApiError(400, "Worker selection is required");
     if (!cleaningType || cleaningType.length === 0) throw new ApiError(400, "At least one task must be selected");
 
-    // 4. IMAGE UPLOAD LOGIC
+    // IMAGE UPLOAD LOGIC
     let imageLocalPath;
     if (req.file && req.file.path) {
         imageLocalPath = req.file.path;
@@ -26,10 +31,9 @@ const submitCleaningLog = asyncHandler(async (req, res) => {
         if (uploadResponse) {
              imageURL = uploadResponse.url;
         }
-        console.log(imageURL);
     }
 
-    // 5. Duplicate Check (Prevent submitting twice in one day)
+    // Duplicate Check
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date();
@@ -64,9 +68,12 @@ const submitCleaningLog = asyncHandler(async (req, res) => {
 const getMyRoomHistory = asyncHandler(async (req, res) => {
     const room_no = req.user.room_no;
     
+    // Debug log to ensure we are querying for the right room
+    console.log(`Fetching history for room: ${room_no}`);
+
     const history = await Log.find({ room_no })
-        .populate("worker", "name") // Get worker name instead of just ID
-        .sort({ createdAt: -1 });   // Newest first
+        .populate("worker", "name") 
+        .sort({ createdAt: -1 });   
 
     return res.status(200).json(
         new ApiRes(200, history, "Cleaning history fetched successfully")

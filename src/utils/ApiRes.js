@@ -1,15 +1,11 @@
-class ApiRes extends Error {
-  constructor(
-    statusCode,
-    data,
-    message = 'Success'
-  ){
-    super(message); 
+class ApiRes {
+  constructor(statusCode, data, message = 'Success'){
     this.statusCode = statusCode;
     this.data = data;
+    this.message = message;
     this.success = statusCode < 400;
-    this.name = this.constructor.name;
   }
 }
 
 export { ApiRes };
+
