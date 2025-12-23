@@ -4,17 +4,15 @@ import { ApiRes } from "../utils/ApiRes.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-// STUDENT: Raise Issue
 const raiseIssue = asyncHandler(async (req, res) => {
     const { issueType, description } = req.body;
     const room_no = req.user.room_no;
-    const room_id = req.user._id; // <--- REQUIRED by Schema
+    const room_id = req.user._id; 
 
     if (!issueType || !description) {
         throw new ApiError(400, "Issue Type and Description are required");
     }
 
-    // 1. Handle Image Upload
     let imageLocalPath;
     if (req.file && req.file.path) {
         imageLocalPath = req.file.path;
@@ -28,7 +26,6 @@ const raiseIssue = asyncHandler(async (req, res) => {
         }
     }
 
-    // 2. Create Issue
     const newIssue = await Issue.create({
         room_id: room_id, // Link to User ID
         room_no: room_no,
@@ -43,7 +40,6 @@ const raiseIssue = asyncHandler(async (req, res) => {
     );
 });
 
-// STUDENT: Get My Issues
 const getMyIssues = asyncHandler(async (req, res) => {
     const room_no = req.user.room_no;
     
@@ -54,9 +50,7 @@ const getMyIssues = asyncHandler(async (req, res) => {
     );
 });
 
-// --- ADMIN CONTROLLERS ---
 
-// ADMIN: Get Issues for a Specific Room
 const getIssuesByRoom = asyncHandler(async (req, res) => {
     const { room_no } = req.params; 
 
@@ -71,7 +65,6 @@ const getIssuesByRoom = asyncHandler(async (req, res) => {
     );
 });
 
-// ADMIN: Get ALL Issues
 const getAllIssues = asyncHandler(async (req, res) => {
     const issues = await Issue.find().sort({ createdAt: -1 });
 
@@ -80,9 +73,8 @@ const getAllIssues = asyncHandler(async (req, res) => {
     );
 });
 
-// ADMIN: Resolve/Update an Issue
 const resolveIssue = asyncHandler(async (req, res) => {
-    const issueId = req.params.issueId || req.body.issueId; // Usually sent in body for updates, or req.params
+    const issueId = req.params.issueId || req.body.issueId; 
     const { status, adminResponse } = req.body;
 
     if (!issueId || !status) {

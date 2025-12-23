@@ -64,7 +64,6 @@ const submitCleaningLog = asyncHandler(async (req, res) => {
     );
 });
 
-// STUDENT: Get History
 const getMyRoomHistory = asyncHandler(async (req, res) => {
     const room_no = req.user.room_no;
     
