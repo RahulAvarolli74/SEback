@@ -22,12 +22,12 @@ const raiseIssue = asyncHandler(async (req, res) => {
     if (imageLocalPath) {
         const uploadResponse = await uploadOnCloudinary(imageLocalPath);
         if (uploadResponse) {
-            imageURL = uploadResponse.url;
+            imageURL = uploadResponse.secure_url;
         }
     }
 
     const newIssue = await Issue.create({
-        room_id: room_id, // Link to User ID
+        room_id: room_id, 
         room_no: room_no,
         issueType,
         description,
